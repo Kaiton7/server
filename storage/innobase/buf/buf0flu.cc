@@ -1660,7 +1660,7 @@ ulint buf_flush_LRU(ulint max_n)
   if (buf_pool.n_flush_LRU())
     return 0;
 
-  log_buffer_flush_to_disk();
+  log_buffer_flush_to_disk_async();
 
   mysql_mutex_lock(&buf_pool.mutex);
   if (buf_pool.n_flush_LRU_)
@@ -1719,7 +1719,6 @@ inline void log_t::write_checkpoint(lsn_t end_lsn) noexcept
   mach_write_to_4(my_assume_aligned<4>(c + 60), my_crc32c(0, c, 60));
 
   lsn_t resizing= resize_lsn.load(std::memory_order_relaxed);
-
 #ifdef HAVE_PMEM
   if (is_pmem())
   {
@@ -1747,16 +1746,11 @@ inline void log_t::write_checkpoint(lsn_t end_lsn) noexcept
       resize_log.write(0, {buf, 4096});
       aligned_free(buf);
       resize_log.write(CHECKPOINT_1, {c, get_block_size()});
-      latch.wr_lock(SRW_LOCK_CALL);
-      /* FIXME: write and flush outside exclusive latch */
-      ut_a(flush(write_buf<false>()));
     }
-    else
-    {
-      if (srv_file_flush_method != SRV_O_DSYNC)
-        ut_a(log.flush());
-      latch.wr_lock(SRW_LOCK_CALL);
-    }
+
+    if (srv_file_flush_method != SRV_O_DSYNC)
+      ut_a(log.flush());
+    latch.wr_lock(SRW_LOCK_CALL);
     n_pending_checkpoint_writes--;
     resizing= resize_lsn.load(std::memory_order_relaxed);
   }
@@ -1836,7 +1830,6 @@ inline void log_t::write_checkpoint(lsn_t end_lsn) noexcept
   }
 
   log_resize_release();
-
   if (UNIV_LIKELY(resizing <= 1));
   else if (resizing > checkpoint_lsn)
     buf_flush_ahead(resizing, false);
