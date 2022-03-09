@@ -1068,10 +1068,9 @@ ATTRIBUTE_COLD void log_write_and_flush_prepare()
 }
 
 /** Durably write the log up to log_sys.get_lsn().
-@return pending lsn in group commit wait queue.
-@retval if > 0, caller must do log_write_up_to to prevent stalls.
-*/
-ATTRIBUTE_COLD lsn_t log_write_and_flush()
+@return lsn that log_write_up_to() must be invoked with
+@retval 0 if there is no need to invoke log_write_up_to() */
+ATTRIBUTE_COLD __attribute__((warn_unused_result)) lsn_t log_write_and_flush()
 {
   ut_ad(!srv_read_only_mode);
   if (!log_sys.is_pmem())
