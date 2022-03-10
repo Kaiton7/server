@@ -161,6 +161,8 @@ private:
       }
 
       io_uring_cqe_seen(&aio->uring_, cqe);
+      if (aio->resubmit(iocb))
+        continue;
 
       // If we need to resubmit the IO operation, but the ring is full,
       // we will follow the same path as for any other error codes.

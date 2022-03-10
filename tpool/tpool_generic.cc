@@ -51,6 +51,20 @@ namespace tpool
   static const std::chrono::milliseconds LONG_TASK_DURATION = std::chrono::milliseconds(500);
   static const int  OVERSUBSCRIBE_FACTOR = 2;
 
+bool aio::resubmit(aiocb *cb)
+{
+  if (cb->m_ret_len != cb->m_len)
+  {
+    /* partial read/write */
+    cb->m_buffer= (char *) cb->m_buffer + cb->m_ret_len;
+    cb->m_len-= cb->m_ret_len;
+    cb->m_offset+= cb->m_ret_len;
+    submit_io(cb);
+    return true;
+  }
+  return false;
+}
+
 /**
   Implementation of generic threadpool.
   This threadpool consists of the following components

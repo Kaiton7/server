@@ -170,6 +170,9 @@ public:
   /** "Unind" file to AIO handler (used on Windows only) */
   virtual int unbind(const native_file_handle &fd)= 0;
   virtual ~aio(){};
+protected:
+  /** resubmit to AIO handler on partial read/writes */
+  bool resubmit(aiocb *cb);
 };
 
 class timer
